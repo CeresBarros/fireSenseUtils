@@ -60,19 +60,20 @@ utils::globalVariables(c(
   doSNLL_FSTest <- any(grepl("snll_fs", tolower(tests)))
   doADTest <- any(grepl("adtest", tolower(tests)))
   if (missing(landscape))
-    landscape <- get("landscape", envir = .GlobalEnv)
+    landscape <- base::get("landscape", envir = .GlobalEnv)
   if (missing(annualDTx1000))
-    annualDTx1000 <- get("annualDTx1000", envir = .GlobalEnv)
+    annualDTx1000 <- base::get("annualDTx1000", envir = .GlobalEnv)
   if (missing(nonAnnualDTx1000))
-    nonAnnualDTx1000 <- get("nonAnnualDTx1000", envir = .GlobalEnv)
+    nonAnnualDTx1000 <- base::get("nonAnnualDTx1000", envir = .GlobalEnv)
   if (missing(historicalFires))
-    historicalFires <- get("historicalFires", envir = .GlobalEnv)
+    historicalFires <- base::get("historicalFires", envir = .GlobalEnv)
   if (missing(fireBufferedListDT))
-    fireBufferedListDT <- get("fireBufferedListDT", envir = .GlobalEnv)
+    fireBufferedListDT <- base::get("fireBufferedListDT", envir = .GlobalEnv)
   #lapply(annualDTx1000, setDT)
   lapply(nonAnnualDTx1000, setDT)
   #lapply(fireBufferedListDT, setDT)
   # dtThreadsOrig <- data.table::setDTthreads(1)
+  if (is(FS_formula, "character")) FS_formula <- as.formula(FS_formula)
   colsToUse <- attributes(terms(FS_formula))[["term.labels"]]
   # How many of the parameters belong to the model?
   parsModel <- length(colsToUse)
@@ -102,25 +103,29 @@ utils::globalVariables(c(
   lrgSmallFireYears <- list(large = names(largest),
                             small = smallest)
   objFunResList <- list() # will hold objective function values --> which is now >1 for large, then small fires
+  for(i in 1:3e2) rnorm(1e5)
+  message("Running")
+  return(rnorm(1, 1000))
   for (ii in seq(lrgSmallFireYears)) {
     yrs <- lrgSmallFireYears[[ii]]
     if (length(yrs)) {
-      results <- parallel::mcmapply(
-        mc.cores = min(length(years[yrs]), objFunCoresInternal),
-        mc.preschedule = FALSE,
-        SIMPLIFY = FALSE,
-        # results <- purrr::pmap(
+      #results <- #mapply(
+        #mc.cores = min(length(years[yrs]), objFunCoresInternal),
+        #mc.preschedule = FALSE,
+        #SIMPLIFY = FALSE,
+      results <- purrr::pmap(.l = list(
         annDTx1000 = annualDTx1000[yrs],
         yr = years[yrs],
         annualFires = historicalFiresAboveMin[yrs],
-        annualFireBufferedDT = fireBufferedListDT[yrs],
-        MoreArgs = list(par = par, parsModel = parsModel,
+        annualFireBufferedDT = fireBufferedListDT[yrs]),
+        #MoreArgs = list(
+          par = par, parsModel = parsModel,
                         verbose = verbose,
                         nonAnnualDTx1000 = nonAnnualDTx1000,
                         indexNonAnnual = indexNonAnnual,
                         colsToUse = colsToUse,
-                        covMinMax = covMinMax),
-        # .f = function(yr, annDTx1000, par, parsModel,
+                        covMinMax = covMinMax,#),
+        .f = #function(yr, annDTx1000, par, parsModel,
         function(yr, annDTx1000, par, parsModel,
                  annualFires, nonAnnualDTx1000, annualFireBufferedDT,
                  indexNonAnnual, colsToUse, covMinMax,
@@ -146,7 +151,8 @@ utils::globalVariables(c(
           } else if (length(logisticPars) == 3) {
             set(shortAnnDTx1000, NULL, "spreadProb", logistic3p(mat %*% covPars, logisticPars, par1 = lowerSpreadProb))
           } else if (length(logisticPars) == 2) {
-            set(shortAnnDTx1000, NULL, "spreadProb", logistic2p(mat %*% covPars, logisticPars, par1 = lowerSpreadProb, par4 = 0.5))
+            shortAnnDTx1000$spreadProb <- logistic2p(mat %*% covPars, logisticPars, par1 = lowerSpreadProb, par4 = 0.5)
+            #set(shortAnnDTx1000, NULL, "spreadProb", logistic2p(mat %*% covPars, logisticPars, par1 = lowerSpreadProb, par4 = 0.5))
           }
           # logistic multiplication
           # set(annDTx1000, NULL, "spreadProb", logistic4p(annDTx1000$pred, par[1:4])) ## 5-parameters logistic
@@ -219,6 +225,9 @@ utils::globalVariables(c(
                       line = 2, side = 1)
               }
 
+              emp <- emp[N > 1]
+              emp[, numRepsCompleted := .N, by = "initialLocus"]
+              emp <- emp[numRepsCompleted > 1]
               # only use fires that escaped --> i.e., greater than 1 pixel
               emp <- emp[N > 1, list(lik = EnvStats::demp(x = size[1], obs = N)), by = "initialLocus"]
               minLik <- 1e-7#min(emp$lik[emp$lik > 0])
@@ -377,7 +386,7 @@ utils::globalVariables(c(
       if (isTRUE(doSNLL_FSTest)) {
         SNLL_FSTest <- round(sum(unlist(results$SNLL)),1)
         failVal <- 1e5L
-        threshold <- 525 * length(results$SNLL_FS) #parameterize?
+        threshold <- 550 * length(results$SNLL_FS) #parameterize?
         if (SNLL_FSTest > threshold && ii == 1) { #fine tune this threshold
           SNLL_FSTestOrig <- SNLL_FSTest
           SNLL_FSTest <- failVal
