@@ -103,9 +103,6 @@ utils::globalVariables(c(
   lrgSmallFireYears <- list(large = names(largest),
                             small = smallest)
   objFunResList <- list() # will hold objective function values --> which is now >1 for large, then small fires
-  for(i in 1:3e2) rnorm(1e5)
-  message("Running")
-  return(rnorm(1, 1000))
   for (ii in seq(lrgSmallFireYears)) {
     yrs <- lrgSmallFireYears[[ii]]
     if (length(yrs)) {
@@ -146,6 +143,7 @@ utils::globalVariables(c(
           # matrix multiplication
           covPars <- tail(x = par, n = parsModel)
           logisticPars <- head(x = par, n = length(par) - parsModel)
+          if (logisticPars[1] > maxFireSpread) warning("The first parameter of the logistic is > ", maxFireSpread, ". The parameter should be lowered.")
           if (length(logisticPars) == 4) {
             set(shortAnnDTx1000, NULL, "spreadProb", logistic4p(mat %*% covPars, logisticPars))
           } else if (length(logisticPars) == 3) {
