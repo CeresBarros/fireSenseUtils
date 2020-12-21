@@ -124,8 +124,9 @@ runDEoptim <- function(landscape,
         if (!require("reproducible")) install.packages("reproducible") # will do Require too
         Require::checkPath(dirname(logPath), create = TRUE)
         message(Sys.info()[['nodename']])
-        Require::Require("PredictiveEcology/fireSenseUtils@development", dependencies = TRUE)
-        # devtools::install_github("PredictiveEcology/fireSenseUtils@development", dependencies = TRUE)
+        # Use the devtools SHA hashing so it skips if unnecessary
+        # Require::Require("PredictiveEcology/fireSenseUtils@development", dependencies = TRUE)
+        devtools::install_github("PredictiveEcology/fireSenseUtils@development", dependencies = FALSE, upgrade = FALSE)
       }
     )
     stopCluster(cl)
@@ -152,7 +153,6 @@ runDEoptim <- function(landscape,
     list2env(mget(unlist(objsNeeded), envir = environment()), envir = .GlobalEnv)
   }
 
-  browser()
   #####################################################################
   # DEOptim call
   #####################################################################
@@ -247,7 +247,6 @@ DEoptimIterative <- function(itermax,
       controlForCache <- controlArgs[c("VTR", "strategy", "NP", "CR", "F", "bs", "trace",
                                        "initialpop", "p", "c", "reltol",
                                        "packages", "parVar", "foreachArgs")]
-      browser()
       st1 <- system.time(DE[[iter]] <- #Cache(
         DEoptimForCache(
         fireSenseUtils::.objfunSpreadFit,
